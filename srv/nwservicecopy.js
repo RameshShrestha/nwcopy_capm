@@ -1,30 +1,32 @@
 const cds = require('@sap/cds');
 const e = require('express');
+const { handleFieldControls, validateOrder } = require('./Controllers/OrderHandler');
 class NWCopyService extends cds.ApplicationService {
 
   /** register custom handlers */
   init() {
-    this.after('READ', 'Orders', each => {
-      each.orderPlaceVisible = false;
-      each.orderCancelVisible = false;
-      each.orderDeliveredVisible = false;
-      each.editable = false;
-      each.deletable = false;
-      if (each.OrderStatus === "Initial" || each.OrderStatus === "Cancelled") {
-        each.orderPlaceVisible = true;
-        each.editable = true;
-        each.deletable = true;
-      }
-      if (each.OrderStatus === "Ordered") {
-        each.orderCancelVisible = true;
-        each.orderDeliveredVisible = true;
-      }
-      if (each.OrderStatus === "Cancelled") {
-        each.deletable = true;
-        each.editable = true;
-      }
+    this.after('READ', 'Orders', each => handleFieldControls(each));
+    // this.after('READ', 'Orders', each => {
+    //   each.orderPlaceVisible = false;
+    //   each.orderCancelVisible = false;
+    //   each.orderDeliveredVisible = false;
+    //   each.editable = false;
+    //   each.deletable = false;
+    //   if (each.OrderStatus === "Initial" || each.OrderStatus === "Cancelled") {
+    //     each.orderPlaceVisible = true;
+    //     each.editable = true;
+    //     each.deletable = true;
+    //   }
+    //   if (each.OrderStatus === "Ordered") {
+    //     each.orderCancelVisible = true;
+    //     each.orderDeliveredVisible = true;
+    //   }
+    //   if (each.OrderStatus === "Cancelled") {
+    //     each.deletable = true;
+    //     each.editable = true;
+    //   }
 
-    });
+    // });
     // const { 'Orders.Items':OrderItems } = this.entities
 
     // this.before ('UPDATE', 'Orders', async function(req) {
@@ -57,35 +59,34 @@ class NWCopyService extends cds.ApplicationService {
     // })
     this.on('UPDATE', 'Orders.Order_Details.drafts', async function (req, next) {
       const newOrder = req.data;
-      console.log("UpdatedOrderItem", newOrder);
+      // console.log("UpdatedOrderItem", newOrder);
       if (req.params[0]) {
         let { ID } = req.params[0];
 
         const { 'Orders.Order_Details': OrderItems } = this.entities;
         //   const currentItem = await SELECT.one.from(OrderItems.drafts).where({ up__ID: newOrder.up__ID });
         const currentItem = await SELECT.one.from(OrderItems.drafts).where({ ID: ID });
-        console.log("Current Item", currentItem);
+        //   console.log("Current Item", currentItem);
         let quantity = req.data.Quantity || currentItem.Quantity || 0;
         let discount = req.data.Discount || currentItem.Discount || 0;
         let UnitPrice = req.data.UnitPrice || currentItem.UnitPrice || 0;
         let total = UnitPrice * quantity * ((100 - discount) / 100);
-        console.log("Quantity :", quantity, "Discount : ", discount, "UnitPrice : ", UnitPrice, "Total : ", total);
+        //  console.log("Quantity :", quantity, "Discount : ", discount, "UnitPrice : ", UnitPrice, "Total : ", total);
         newOrder.Total = total;
       }
 
       //   newOrder.Total = '4234.32';
       //  console.log("EXecuted here to Update new Order Item Order_Details");
-      console.log("updatedOrder", newOrder);
+      //  console.log("updatedOrder", newOrder);
 
       await next();
 
     });
     this.after('UPDATE', 'Orders.Order_Details.drafts', async function (req) {
       const { Orders } = this.entities;
-      console.log("Current Req", req);
+      //  console.log("Current Req", req);
       if (req) {
         let { up__ID } = req;
-
         const { 'Orders.Order_Details': OrderItems, Orders } = this.entities;
         const currentItems = await SELECT.from(OrderItems.drafts).where({ up__ID: up__ID });
 
@@ -98,10 +99,8 @@ class NWCopyService extends cds.ApplicationService {
           TotalOrder: totalOrder,       //>  simple value
 
         });
-        console.log("udpatedOrder: ", udpatedOrder);
-        console.log("Current Items list", currentItems);
-
-
+        //  console.log("udpatedOrder: ", udpatedOrder);
+        //  console.log("Current Items list", currentItems);
       }
 
 
@@ -110,8 +109,6 @@ class NWCopyService extends cds.ApplicationService {
     });
     this.on('NEW', 'Orders.drafts', async function (req, next) {
       const newOrder = req.data;
-      console.log("EXecuted here to  new Order Header");
-      console.log("New Order", newOrder);
       newOrder.criticality = 5;
       newOrder.OrderStatus = "Initial";
       await next();
@@ -119,49 +116,38 @@ class NWCopyService extends cds.ApplicationService {
     this.on('NEW', 'Orders.Order_Details.drafts', async function (req, next) {
       const newOrder = req.data;
       const { 'Orders.Order_Details': OrderItems } = this.entities;
-      console.log("EXecuted here to  new Order Item");
-      //  console.log( "New Order Created", newOrder);
-      console.log("Available Entities", this.entities);
-
       const existingItems = await SELECT.from(OrderItems.drafts).where({ up__ID: newOrder.up__ID });
       let itemCounter = 1;
       if (existingItems) {
         itemCounter = existingItems.length + 1;
       }
-
-      console.log("Exiting Other Items", existingItems);
       newOrder.ItemNumber = itemCounter;
       newOrder.Quantity = 0;
+      newOrder.Discount = 0;
       newOrder.Total = 0;
-
       newOrder.Currency_code = 'USD';
-
       await next();
     });
-    this.on('*', async (req, next) => {
-      console.log(`Event received: ${req.event} on entity: ${req.target?.name}`);
-      //     //     // Add your generic logic here
-      await next();
-    });
+    // this.on('*', async (req, next) => {
+    //   //console.log(`Event received: ${req.event} on entity: ${req.target?.name}`);
+    //   //     //     // Add your generic logic here
+    //   await next();
+    // });
 
     this.on('placeOrder', async req => {
 
-      console.log("Request passed", req.params);
+      //console.log("Request passed", req.params);
       let message = '';
       if (req.params[0]) {
         let { ID } = req.params[0];
+        let result = validateOrder(ID);
         const currentOrder = await SELECT.one.from('Orders').where({ ID: ID });
-        console.log(currentOrder);
+        //console.log(currentOrder);
         if (currentOrder) {
           let currentStatus = currentOrder.OrderStatus;
           if (currentStatus = '' || !currentStatus || currentStatus == 'Initial' || currentStatus == 'Cancelled') {
-            //update currentStatus
-
-            //    let updatedOrder = await UPDATE.from ('Orders') .where ({ID:ID});
-            // let updatedOrder = await UPDATE `Orders` .set `OrderStatus = 'Ordered'` .where `ID=${ID}`;
-
             let orderItems = await SELECT.one.from('Orders.Order_Details').where({ up__ID: ID });
-            console.log("Order Items to be Ordered", orderItems);
+            //console.log("Order Items to be Ordered", orderItems);
             if (!orderItems || orderItems.length < 0) {
               req.warn("No Order Items available to process the order");
               return;
@@ -188,12 +174,12 @@ class NWCopyService extends cds.ApplicationService {
       return message;
     });
     this.on('cancelOrder', async req => {
-      console.log("Request passed", req.params);
+      //console.log("Request passed", req.params);
       let message = '';
       if (req.params[0]) {
         let { ID } = req.params[0];
         const currentOrder = await SELECT.one.from('Orders').where({ ID: ID });
-        console.log(currentOrder);
+        //console.log(currentOrder);
         if (currentOrder) {
           let currentStatus = currentOrder.OrderStatus;
           if (currentStatus == 'Ordered') {
@@ -224,12 +210,12 @@ class NWCopyService extends cds.ApplicationService {
     });
 
     this.on('orderDelivered', async req => {
-      console.log("Request passed", req.params);
+      //console.log("Request passed", req.params);
       let message = '';
       if (req.params[0]) {
         let { ID } = req.params[0];
         const currentOrder = await SELECT.one.from('Orders').where({ ID: ID });
-        console.log(currentOrder);
+        //console.log(currentOrder);
         if (currentOrder) {
           let currentStatus = currentOrder.OrderStatus;
           if (currentStatus == 'Ordered') {
