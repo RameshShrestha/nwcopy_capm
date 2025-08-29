@@ -236,7 +236,6 @@ class NWCopyService extends cds.ApplicationService {
             let updatedOrder = await UPDATE('Orders', ID).with({
               OrderStatus: 'Delivered',       //>  simple value
               criticality: 3,
-
             })
             message = 'Order ' + currentOrder.OrderID + ' Delivered Successfully';
             req.notify('Order ' + currentOrder.OrderID + ' Delivered Successfully');
