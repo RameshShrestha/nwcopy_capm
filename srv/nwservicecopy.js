@@ -10,8 +10,10 @@ class NWCopyService extends cds.ApplicationService {
       each.orderDeliveredVisible = false;
       each.editable = false;
       each.deletable = false;
-      if (each.OrderStatus === "Initial") {
+      if (each.OrderStatus === "Initial" || each.OrderStatus === "Cancelled") {
         each.orderPlaceVisible = true;
+        each.editable = true;
+        each.deletable = true;
       }
       if (each.OrderStatus === "Ordered") {
         each.orderCancelVisible = true;
@@ -21,11 +23,6 @@ class NWCopyService extends cds.ApplicationService {
         each.deletable = true;
         each.editable = true;
       }
-      if (each.OrderStatus === "Ordered") {
-        each.orderCancelVisible = true;
-      }
-
-
 
     });
     // const { 'Orders.Items':OrderItems } = this.entities
@@ -157,11 +154,18 @@ class NWCopyService extends cds.ApplicationService {
         console.log(currentOrder);
         if (currentOrder) {
           let currentStatus = currentOrder.OrderStatus;
-          if (currentStatus = '' || !currentStatus || currentStatus == 'Initial') {
+          if (currentStatus = '' || !currentStatus || currentStatus == 'Initial' || currentStatus == 'Cancelled') {
             //update currentStatus
 
             //    let updatedOrder = await UPDATE.from ('Orders') .where ({ID:ID});
             // let updatedOrder = await UPDATE `Orders` .set `OrderStatus = 'Ordered'` .where `ID=${ID}`;
+
+            let orderItems = await SELECT.one.from('Orders.Order_Details').where({ up__ID: ID });
+            console.log("Order Items to be Ordered", orderItems);
+            if (!orderItems || orderItems.length < 0) {
+              req.warn("No Order Items available to process the order");
+              return;
+            }
             let updatedOrder = await UPDATE('Orders', ID).with({
               OrderStatus: 'Ordered',       //>  simple value
               criticality: 2,

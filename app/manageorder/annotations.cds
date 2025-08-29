@@ -1,8 +1,16 @@
 using NWCopyService as service from '../../srv/nwservicecopy';
 
 annotate service.Orders with @(
+    //  Capabilities.DeleteRestrictions : {
+    //     Deletable : deletable
+    // },
+    // Capabilities.UpdateRestrictions :{
+    //    Updatable  : editable
+    // },
+     UI.UpdateHidden: { $edmJson: { $Not: { $Path: 'editable' } } },
+     UI.DeleteHidden : { $edmJson: { $Not: { $Path: 'deletable' } } },
     UI.SelectionPresentationVariant #Default: {
-        Text               : 'All Books',
+        Text               : 'Orders sorted based on modified time',
         PresentationVariant: {
             Visualizations: ['@UI.LineItem'],
             SortOrder     : [{
@@ -49,7 +57,7 @@ annotate service.Orders with @(
             Action : 'NWCopyService.cancelOrder',
             Label  : 'Cancel Order',
             IconUrl: 'sap-icon://cart-approval',
-             ![@UI.Hidden] : orderCancelVisible
+            // ![@UI.Hidden] : orderCancelVisible
 
         },
         {
@@ -57,7 +65,7 @@ annotate service.Orders with @(
             Action : 'NWCopyService.orderDelivered',
             Label  : 'Order Delivered',
             IconUrl: 'sap-icon://cart-approval',
-              ![@UI.Hidden] : orderDeliveredVisible
+           //   ![@UI.Hidden] : orderDeliveredVisible
 
         },
         {
