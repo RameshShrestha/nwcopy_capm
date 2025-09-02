@@ -2,25 +2,25 @@ using {
     Currency,
     managed,
     cuid,
-    Country,
-    sap.common.CodeList
 } from '@sap/cds/common';
 
 namespace nwcopy;
 
 entity Orders : cuid, managed {
-    OrderID        : Int32    @title: 'Order Number'; //> readable key
+    OrderID        : Int32    @title: 'Order Number' @readonly; //> readable key
     CustomerID     : String   @title: 'Customer ID';
+    _Customers  : Association to Customers on _Customers.CustomerID = CustomerID;
     EmployeeID     : Integer  @title: 'Employee ID';
-
+    EmployeeDetail : Association to Employee on EmployeeDetail.EmployeeID = EmployeeID;
     @Common.FieldControl: #ReadOnly
     OrderDate      : Date     @title: 'Order Date';
     RequiredDate   : Date     @title: 'Required Date';
     ShippedDate    : Date     @title: 'Shipped Date';
     ShipVia        : Int16    @title: 'Ship Via';
-    Freight        : Decimal  @title: 'Freigth';
+    Freight        : Decimal  @title: 'Freigth' @Measures.ISOCurrency : Currency_code;
+    
     ShipName       : String   @title: 'Ship Name';
-    ShipAddress    : String   @title: 'Ship Address';
+    ShipAddress    : String   @title: 'Ship Address' @UI.MultiLineText;
     ShipCity       : String   @title: 'Ship City';
     ShipRegion     : String   @title: 'Ship Region';
     ShipPostalCode : String   @title: 'Ship Postal Code';
@@ -31,24 +31,24 @@ entity Orders : cuid, managed {
      virtual editable : Boolean;
      virtual deletable : Boolean;
     @Common.FieldControl: #ReadOnly
-    TotalOrder     : Decimal  @title: 'Total Order Price';
+    TotalOrder     : Decimal  @title: 'Total Order Price' @Measures.ISOCurrency : Currency_code;
     @Common.FieldControl: #ReadOnly
     OrderStatus    : String   @title: 'Order Status';
     criticality    : Integer default 1  @title: 'Criticality Indicator';
     Currency       : Currency @title: 'Currency Code';
     Order_Details  : Composition of many {
                          key ID            : UUID     @(Core.Computed: true);
-                             ItemNumber    : Int32    @title         : 'Item Number';
+                             ItemNumber    : Int32    @title         : 'Item Number' @readonly;
                              ProductID     : Int32    @title         : 'Product ID';
 
                            
-                             UnitPrice     : Decimal  @title: 'Unit Price';
+                             UnitPrice     : Decimal  @title: 'Unit Price' @Measures.ISOCurrency : Currency_code @readonly;
 
                            
-                             Currency      : Currency @title: 'Currency Code';
-                             Quantity      : Int16    @title         : 'Quantity';
-                             Discount      : Int16    @title         : 'Discount';
-                             Total : Decimal @title: 'Total';
+                             Currency      : Currency @title: 'Currency Code' @readonly;
+                             Quantity      : Int16    @title         : 'Quantity' @assert.range: [(0),_];
+                             Discount      : Int16    @title         : 'Discount (%)' @assert.range: [0,100] ;
+                             Total : Decimal @title: 'Total' @readonly  @Measures.ISOCurrency : Currency_code;
                              ProductDetail : Association to one Products
                                                  on ProductDetail.ProductID = ProductID;
 
@@ -57,6 +57,10 @@ entity Orders : cuid, managed {
                          on Shipper.ShipperID = ShipVia;
 
 
+}
+@cds.persistence.skip
+entity OrderStatusVH {
+ key status: String enum { Initial = 'Initial'; Ordered = 'Ordered';Cancelled = 'Cancelled'; Delivered='Delivered'}
 }
 
 // entity Status : CodeList {
@@ -104,6 +108,9 @@ entity Employee : cuid, managed {
         Notes           : String  @title: 'Note';
         ReportsTo       : Int32   @title: 'Reports To';
         PhotoPath       : String  @title: 'Photo Path';
+        fullName : String  = FirstName || ' ' || LastName ;
+        
+   
 }
 
 entity Customers : cuid, managed {

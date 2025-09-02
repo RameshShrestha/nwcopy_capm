@@ -6,6 +6,10 @@ class NWCopyService extends cds.ApplicationService {
   /** register custom handlers */
   init() {
     this.after('READ', 'Orders', each => handleFieldControls(each));
+    this.on('READ','OrderStatusVH', async (req) => {
+     let orderStatusValues = [{'status' :'Initial'},{'status' :'Ordered'},{'status' :'Cancelled'},{'status' :'Delivered'}];
+      return orderStatusValues;
+    });
     // this.after('READ', 'Orders', each => {
     //   each.orderPlaceVisible = false;
     //   each.orderCancelVisible = false;
@@ -63,16 +67,31 @@ class NWCopyService extends cds.ApplicationService {
       if (req.params[0]) {
         let { ID } = req.params[0];
 
-        const { 'Orders.Order_Details': OrderItems } = this.entities;
+        const { 'Orders.Order_Details': OrderItems, Products } = this.entities;
         //   const currentItem = await SELECT.one.from(OrderItems.drafts).where({ up__ID: newOrder.up__ID });
         const currentItem = await SELECT.one.from(OrderItems.drafts).where({ ID: ID });
-        //   console.log("Current Item", currentItem);
-        let quantity = req.data.Quantity || currentItem.Quantity || 0;
-        let discount = req.data.Discount || currentItem.Discount || 0;
-        let UnitPrice = req.data.UnitPrice || currentItem.UnitPrice || 0;
-        let total = UnitPrice * quantity * ((100 - discount) / 100);
-        //  console.log("Quantity :", quantity, "Discount : ", discount, "UnitPrice : ", UnitPrice, "Total : ", total);
-        newOrder.Total = total;
+        console.log('Executed till here .... ****')
+        if (currentItem.ProductID || req.data.ProductID) {
+          const currentProduct = await SELECT.one.from(Products).where({ ProductID: req.data.ProductID || currentItem.ProductID });
+          //   console.log("Current Item", currentItem);
+          let quantity = req.data.Quantity || currentItem.Quantity || 0;
+          let discount = 0;
+          if ('Discount' in req.data) { // When 0 is passsed it fails the condition in JS
+            console.log("Discount is modified");
+            discount = req.data.Discount;
+          } else {
+            discount = currentItem.Discount || 0;
+          }
+         // discount = req.data.Discount || currentItem.Discount || 0;
+          let UnitPrice = currentProduct.UnitPrice || 0;
+          let currencyCode = currentProduct.Currency_code || '';
+          let total = UnitPrice * quantity * ((100 - discount) / 100);
+          console.log("Quantity :", quantity, "Discount : ", discount, "UnitPrice : ", UnitPrice, "Total : ", total);
+          newOrder.Total = total;
+          newOrder.UnitPrice = UnitPrice;
+          newOrder.Currency_code = currencyCode;
+        }
+
       }
 
       //   newOrder.Total = '4234.32';
@@ -107,10 +126,18 @@ class NWCopyService extends cds.ApplicationService {
 
 
     });
+    this.before('NEW', 'Orders.drafts', async (req) => {
+      const { Orders } = this.entities;
+      if (req.data.OrderID) return
+      const { ID: id1 } = await SELECT.one.from(Orders).columns('max(OrderID) as ID')
+      const { ID: id2 } = await SELECT.one.from(Orders.drafts).columns('max(OrderID) as ID')
+      req.data.OrderID = Math.max(id1 || 0, id2 || 0) + 1
+    })
     this.on('NEW', 'Orders.drafts', async function (req, next) {
       const newOrder = req.data;
       newOrder.criticality = 5;
       newOrder.OrderStatus = "Initial";
+      newOrder.Currency_code = 'USD';
       await next();
     });
     this.on('NEW', 'Orders.Order_Details.drafts', async function (req, next) {
@@ -155,6 +182,7 @@ class NWCopyService extends cds.ApplicationService {
             let updatedOrder = await UPDATE('Orders', ID).with({
               OrderStatus: 'Ordered',       //>  simple value
               criticality: 2,
+              Currency_code : 'USD',
               OrderDate: new Date().toISOString().split("T")[0]
             })
             message = 'Order ' + currentOrder.OrderID + ' Ordered Successfully';

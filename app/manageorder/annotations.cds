@@ -1,4 +1,7 @@
 using NWCopyService as service from '../../srv/nwservicecopy';
+// annotate service.Orders with {
+//      EmployeeID  @Common: { Text: Employee.name, TextArrangement: #TextOnly };
+// };
 
 annotate service.Orders with @(
     //  Capabilities.DeleteRestrictions : {
@@ -7,15 +10,15 @@ annotate service.Orders with @(
     // Capabilities.UpdateRestrictions :{
     //    Updatable  : editable
     // },
-     UI.UpdateHidden: { $edmJson: { $Not: { $Path: 'editable' } } },
-     UI.DeleteHidden : { $edmJson: { $Not: { $Path: 'deletable' } } },
+    UI.UpdateHidden                         : {$edmJson: {$Not: {$Path: 'editable'}}},
+    UI.DeleteHidden                         : {$edmJson: {$Not: {$Path: 'deletable'}}},
     UI.SelectionPresentationVariant #Default: {
         Text               : 'Orders sorted based on modified time',
         PresentationVariant: {
             Visualizations: ['@UI.LineItem'],
             SortOrder     : [{
                 $Type     : 'Common.SortOrderType',
-                Property  : modifiedAt,
+                Property  : OrderID,
                 Descending: true
             }]
         }
@@ -24,7 +27,8 @@ annotate service.Orders with @(
         OrderID,
         EmployeeID,
         OrderDate,
-        ShipVia
+        ShipVia,
+        OrderStatus
     ],
     UI.HeaderInfo                           : {
         TypeName      : '{i18n>Order}',
@@ -47,9 +51,8 @@ annotate service.Orders with @(
             Action : 'NWCopyService.placeOrder',
             Label  : 'Place Order',
             IconUrl: 'sap-icon://cart-approval',
-          //  ![@UI.Hidden] : true
-        
-            
+        //  ![@UI.Hidden] : true
+
 
         },
         {
@@ -57,7 +60,7 @@ annotate service.Orders with @(
             Action : 'NWCopyService.cancelOrder',
             Label  : 'Cancel Order',
             IconUrl: 'sap-icon://cart-approval',
-            // ![@UI.Hidden] : orderCancelVisible
+        // ![@UI.Hidden] : orderCancelVisible
 
         },
         {
@@ -65,7 +68,7 @@ annotate service.Orders with @(
             Action : 'NWCopyService.orderDelivered',
             Label  : 'Order Delivered',
             IconUrl: 'sap-icon://cart-approval',
-           //   ![@UI.Hidden] : orderDeliveredVisible
+        //   ![@UI.Hidden] : orderDeliveredVisible
 
         },
         {
@@ -238,23 +241,23 @@ annotate service.Orders with @(
             Label             : 'Place Order',
             IconUrl           : 'sap-icon://cart-approval',
             InvocationGrouping: #Isolated,
-           // ![@UI.Hidden] : orderPlaceVisible
-        
-        },
-        {
-            $Type  : 'UI.DataFieldForAction',
-            Action : 'NWCopyService.cancelOrder',
-            Label  : 'Cancel Order',
-            IconUrl: 'sap-icon://cart-approval',
-              ![@UI.Hidden] : orderCancelVisible
+        // ![@UI.Hidden] : orderPlaceVisible
 
         },
         {
-            $Type  : 'UI.DataFieldForAction',
-            Action : 'NWCopyService.orderDelivered',
-            Label  : 'Order Delivered',
-            IconUrl: 'sap-icon://cart-approval',
-              ![@UI.Hidden] : orderDeliveredVisible
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'NWCopyService.cancelOrder',
+            Label        : 'Cancel Order',
+            IconUrl      : 'sap-icon://cart-approval',
+            ![@UI.Hidden]: orderCancelVisible
+
+        },
+        {
+            $Type        : 'UI.DataFieldForAction',
+            Action       : 'NWCopyService.orderDelivered',
+            Label        : 'Order Delivered',
+            IconUrl      : 'sap-icon://cart-approval',
+            ![@UI.Hidden]: orderDeliveredVisible
 
         },
 
@@ -267,6 +270,12 @@ annotate service.Orders with @(
         {
             $Type             : 'UI.DataField',
             Value             : CustomerID,
+            @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
+
+        },
+        {
+            $Type             : 'UI.DataField',
+            Value             : EmployeeID,
             @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
 
         },
@@ -286,10 +295,12 @@ annotate service.Orders with @(
         {
             $Type: 'UI.DataField',
             Value: TotalOrder,
+             @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
         },
         {
             $Type: 'UI.DataField',
             Value: modifiedAt,
+             @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
         },
 
         {
@@ -309,7 +320,7 @@ annotate service.Orders.Order_Details with @(
             'ProductID',
             'Discount'
         ],
-        TargetProperties: ['Total']
+        TargetProperties: ['Total','UnitPrice','Currency_code','up_/TotalOrder']
     },
 
     UI.HeaderInfo                  : {
@@ -346,12 +357,12 @@ annotate service.Orders.Order_Details with @(
                 $Type: 'UI.DataField',
                 Value: Discount,
             },
-            {
-                $Type             : 'UI.DataField',
-                Label             : 'Currency Code',
-                Value             : Currency_code,
-                @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
-            },
+            // {
+            //     $Type             : 'UI.DataField',
+            //     Label             : 'Currency Code',
+            //     Value             : Currency_code,
+            //     @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
+            // },
             {
                 $Type             : 'UI.DataField',
                 Label             : 'Total',
@@ -368,12 +379,12 @@ annotate service.Orders.Order_Details with @(
         {Value: UnitPrice},
         {Value: Discount},
 
-        {
-            $Type             : 'UI.DataField',
-            Label             : 'Currency Code',
-            Value             : Currency_code,
-            @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
-        },
+        // {
+        //     $Type             : 'UI.DataField',
+        //     Label             : 'Currency Code',
+        //     Value             : Currency_code,
+        //     @HTML5.CssDefaults: {width: '10rem'} // Set the desired width
+        // },
         {
             $Type             : 'UI.DataField',
             Label             : 'Total',
@@ -398,7 +409,7 @@ annotate service.Orders.Order_Details with @(
             $Type: 'UI.DataField',
             Value: ProductID,
         },
-         {
+        {
             $Type: 'UI.DataField',
             Value: UnitPrice,
         },
@@ -415,12 +426,12 @@ annotate service.Orders.Order_Details with @(
             $Type: 'UI.DataField',
             Value: Discount,
         },
-        {
-            $Type             : 'UI.DataField',
-            Label             : 'Currency Code',
-            Value             : Currency_code,
-            @HTML5.CssDefaults: {width: '10rem'}
-        },
+        // {
+        //     $Type             : 'UI.DataField',
+        //     Label             : 'Currency Code',
+        //     Value             : Currency_code,
+        //     @HTML5.CssDefaults: {width: '10rem'}
+        // },
         {
             $Type             : 'UI.DataField',
             Label             : 'Total',
@@ -455,93 +466,138 @@ annotate service.Orders with {
             }
         ]
     };
-    EmployeeID @Common.ValueList: {
-        CollectionPath: 'Employees',
-        Label         : 'Employees',
-        SearchSupported,
-        FetchValues   : 2,
-        Parameters    : [
-            {
-                $Type            : 'Common.ValueListParameterInOut',
-                LocalDataProperty: EmployeeID,
-                ValueListProperty: 'EmployeeID',
-                ![@UI.Importance]: #High,
-            },
+    EmployeeID @Common: {
+        ValueList      : {
+            CollectionPath: 'Employees',
+            Label         : 'Employees',
+            SearchSupported,
+            FetchValues   : 2,
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: EmployeeID,
+                    ValueListProperty: 'EmployeeID',
+                    ![@UI.Importance]: #High,
+                },
 
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'FirstName',
-                ![@UI.Importance]: #High,
-            },
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'LastName'
-            }
-        ]
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'FirstName',
+                    ![@UI.Importance]: #High,
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'LastName'
+                }
+            ]
+        },
+        Text           : EmployeeDetail.fullName,
+        TextArrangement: #TextOnly
     };
-    CustomerID @Common.ValueList: {
-        CollectionPath: 'Customers',
-        Label         : 'Customers',
 
-        Parameters    : [
-            {
-                $Type            : 'Common.ValueListParameterInOut',
-                LocalDataProperty: CustomerID,
-                ValueListProperty: 'CustomerID',
-                ![@UI.Importance]: #High,
-            },
+    CustomerID @Common: {
+        ValueList      : {
+            CollectionPath: 'Customers',
+            Label         : 'Customers',
 
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'CompanyName',
-                ![@UI.Importance]: #High,
-            },
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'Phone'
-            }
-        ]
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: CustomerID,
+                    ValueListProperty: 'CustomerID',
+                    ![@UI.Importance]: #High,
+                },
+
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'CompanyName',
+                    ![@UI.Importance]: #High,
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'Phone'
+                }
+            ]
+        },
+        Text           : _Customers.CompanyName,
+        TextArrangement: #TextOnly
     };
+    OrderStatus  @Common: {
+        ValueListWithFixedValues: true,
+        ValueList      : {
+            CollectionPath: 'OrderStatusVH',
+            Label         : 'Order Status',
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: OrderStatus,
+                    ValueListProperty: 'status',
+                    ![@UI.Importance]: #High,
+                },
+            ]
+        }
+    };
+    deletable @UI.Hidden;
+    editable @UI.Hidden;
+    Freight @UI.Hidden;
+    criticality @UI.Hidden;
+    orderPlaceVisible @UI.Hidden;
+    orderCancelVisible @UI.Hidden;
+    orderDeliveredVisible @UI.Hidden;
+       ID @UI.Hidden;
+    Currency @UI.Hidden;
+
+
 };
 
 annotate service.Orders.Order_Details with {
-    ProductID @Common.ValueList: {
-        CollectionPath: 'Products',
-        Label         : 'Products',
+    ProductID @Common: {
+        ValueList      : {
+            CollectionPath: 'Products',
+            Label         : 'Products',
 
-        Parameters    : [
-            {
-                $Type            : 'Common.ValueListParameterInOut',
-                LocalDataProperty: ProductID,
-                ValueListProperty: 'ProductID',
-                ![@UI.Importance]: #High,
-            },
+            Parameters    : [
+                {
+                    $Type            : 'Common.ValueListParameterInOut',
+                    LocalDataProperty: ProductID,
+                    ValueListProperty: 'ProductID',
+                    ![@UI.Importance]: #High,
+                },
 
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'ProductName',
-                ![@UI.Importance]: #High,
-            },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'ProductName',
+                    ![@UI.Importance]: #High,
+                },
 
-            {
-                $Type            : 'Common.ValueListParameterInOut',
-                LocalDataProperty: UnitPrice,
-                ValueListProperty: 'UnitPrice'
-            },
-            {
-                $Type            : 'Common.ValueListParameterInOut',
-                LocalDataProperty: Currency_code,
-                ValueListProperty: 'Currency_code',
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    LocalDataProperty: UnitPrice,
+                    ValueListProperty: 'UnitPrice'
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    LocalDataProperty: Currency_code,
+                    ValueListProperty: 'Currency_code',
 
-            },
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'UnitsInStock'
-            },
-            {
-                $Type            : 'Common.ValueListParameterDisplayOnly',
-                ValueListProperty: 'Discontinued'
-            }
-        ]
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'UnitsInStock'
+                },
+                {
+                    $Type            : 'Common.ValueListParameterDisplayOnly',
+                    ValueListProperty: 'Discontinued'
+                }
+            ]
+        },
+
+        FieldControl   : #Mandatory,
+        Text           : ProductDetail.ProductName,
+        TextArrangement: #TextOnly
+
     };
+    ID @UI.Hidden;
+    up_ @UI.Hidden;
+    Currency @UI.Hidden;
 };

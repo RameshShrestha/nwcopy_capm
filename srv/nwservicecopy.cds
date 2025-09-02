@@ -1,7 +1,9 @@
 using {nwcopy} from '../db/schema';
 
 service NWCopyService {
+  
     entity Customers as projection on nwcopy.Customers;
+ 
     entity Employees as projection on nwcopy.Employee;
 
     entity Orders    as projection on nwcopy.Orders
@@ -39,6 +41,7 @@ service NWCopyService {
 entity Products  as projection on nwcopy.Products;
 entity Shippers  as projection on nwcopy.Shipper;
 entity Suppliers as projection on nwcopy.Supplier;
+entity OrderStatusVH as projection on nwcopy.OrderStatusVH;
 
 annotate Orders with @odata.draft.enabled;
 annotate Products with @odata.draft.enabled;
